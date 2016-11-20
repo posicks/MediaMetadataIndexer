@@ -1,5 +1,5 @@
 
-.DS_Store
+**/.DS_Store
 
 .settings/org.eclipse.jdt.core.prefs
 
@@ -8,5 +8,3 @@
 .project
 
 .classpath
-
-src/test/.DS_Store
