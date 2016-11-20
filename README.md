@@ -49,6 +49,7 @@ usage: Indexer
 
 ## Example Execution from the Beginning
 ```
+docker pull scylladb/scylla:1.4.1
 docker run -d -p 9042:9042 -p 10000:10000 -p 9160:9160 -p 7199:7199 --name scylladb scylladb/scylla:1.4.1
 git clone https://github.com/posicks/MediaMetadataIndexer.git
 cd MediaMetadataIndexer
