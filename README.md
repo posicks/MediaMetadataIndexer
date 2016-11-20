@@ -1,4 +1,4 @@
-[components]: https://github.com/posicks/MediaMetadataIndexer/raw/master/Components%20and%20Flow.png "Components and Flow"
+[components]: https://github.com/posicks/MediaMetadataIndexer/raw/master/docs/Components%20and%20Flow.png "Components and Flow"
 
 # Media Metadata Indexer
 
