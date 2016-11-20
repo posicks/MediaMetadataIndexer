@@ -10,7 +10,9 @@ are supported and have been tested with ScyllaDB 1.4 and Cassandra 3.9.
 The [Metadata Extractor](https://drewnoakes.com/code/exif/) is used to parse the metadata allowing for the support of a 
 wide range of files.
 
+<div align="center">
 ![Components and Flow][components]
+</div>
 
 ## Building the Application
 The project uses the Maven build system to create a small dependenciless Jar file and a "Fat" executable Jar.
