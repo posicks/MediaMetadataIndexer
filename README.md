@@ -30,10 +30,10 @@ be downloaded and installed or [Docker](https://www.docker.com/) may be used to 
 
 #### Apache Cassandra
 `docker pull cassandra:3.9`
-`docker run -d -p 9042:9042 -p 10000:10000 -p 9160:9160 -p 7199:7199 --name cassandra cassandra:3.9`
+```docker run -d -p 9042:9042 -p 10000:10000 -p 9160:9160 -p 7199:7199 --name cassandra cassandra:3.9```
 
 ## Running the "Fat" executable Jar
-`java -jar target/MediaMetadataIndexer-1.0.0-jar-with-dependencies.jar -i http://s3.amazonaws.com/waldo-recruiting -o localhost -t 100`
+```java -jar target/MediaMetadataIndexer-1.0.0-jar-with-dependencies.jar -i http://s3.amazonaws.com/waldo-recruiting -o localhost -t 100```
 
 ### Command Line:
 ```
