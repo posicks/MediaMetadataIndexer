@@ -11,7 +11,7 @@ The [Metadata Extractor](https://drewnoakes.com/code/exif/) is used to parse the
 wide range of files.
 
 <div align="center">
-![Components and Flow][components]
+    <img src="https://github.com/posicks/MediaMetadataIndexer/raw/master/docs/Components%20and%20Flow.png" />
 </div>
 
 ## Building the Application
