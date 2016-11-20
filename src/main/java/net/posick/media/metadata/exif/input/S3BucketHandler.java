@@ -32,13 +32,13 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
-import net.posick.media.metadata.exif.Context;
+import net.posick.media.metadata.Context;
 import net.posick.media.metadata.exif.handlers.InputHandler;
 
 /**
  * @author posicks
  */
-public class S3DirectoryHandler extends InputHandler
+public class S3BucketHandler extends InputHandler implements FileProcessor
 {
     private static class S3Parser implements ContentHandler
     {
@@ -250,7 +250,7 @@ public class S3DirectoryHandler extends InputHandler
     private int maxThreads;
     
     
-    public S3DirectoryHandler(Context ctx)
+    public S3BucketHandler(Context ctx)
     throws ParserConfigurationException, SAXException
     {
         super(ctx);
@@ -272,9 +272,7 @@ public class S3DirectoryHandler extends InputHandler
     public void process(String inputUri)
     throws IOException
     {
-        FileProcessor fileProcessor = new S3FileProcessor(ctx);
-        fileProcessor.setFileHandler(fileHandler);
-        xmlReader.setContentHandler(this.s3Parser = new S3Parser(httpClient, inputUri, ctx.get(Context.FILE_FILTERS), fileProcessor));
+        xmlReader.setContentHandler(this.s3Parser = new S3Parser(httpClient, inputUri, ctx.get(Context.FILE_FILTERS), this));
         
         HttpGet httpGet = new HttpGet(inputUri);
         httpGet.addHeader("Accept", "application/xml");
@@ -341,6 +339,33 @@ public class S3DirectoryHandler extends InputHandler
         {
             logger.logp(Level.INFO, getClass().getName(), "process", String.format("No files found from \"%s\"", inputUri));
         }
+    }
+    
+
+    @Override
+    public void processFile(String s3Uri, String key, InputStream in)
+    {
+        try
+        {
+            fileHandler.process(key, in);
+        } catch (Exception e)
+        {
+            logger.log(Level.WARNING, String.format("Error reading file \"%s\": %s - %s", s3Uri, e.getClass().getSimpleName(), e.getMessage()));
+        }
+    }
+
+
+    @Override
+    public void fileUnreadable(String s3Uri, String message)
+    {
+        logger.log(Level.WARNING, String.format("File unreadable %s: %s", s3Uri, message));
+    }
+    
+    
+    @Override
+    public void error(String uri, Throwable e)
+    {
+        logger.log(Level.WARNING, String.format("Error executing File processor %s: %s", e.getClass().getSimpleName(), e.getMessage()));
     }
     
     

@@ -1,9 +1,14 @@
-package net.posick.media.metadata.exif;
+package net.posick.media.metadata;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Application Context. Used to pass information throughout the application and stores IO session data. 
+ * 
+ * @author posicks
+ */
 @SuppressWarnings("unchecked")
 public class Context
 {

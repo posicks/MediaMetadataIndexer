@@ -1,4 +1,4 @@
-package net.posick.media.metadata.exif.handlers;
+package net.posick.media.metadata.exif;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,18 +12,32 @@ import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.Tag;
 
-import net.posick.media.metadata.exif.Context;
+import net.posick.media.metadata.Context;
+import net.posick.media.metadata.exif.handlers.FileHandler;
 
+/**
+ * The MetadataExtractorFileHandler is an implementation of the FileHandler that uses the 
+ * Metadata Extractor library (https://drewnoakes.com/code/exif/) to parse EXIF metadata from
+ * the provided input file/stream and sends that metadata to the registered OutputHandler.
+ * 
+ * @author posicks
+ */
 public class MetadataExtractorFileHandler extends FileHandler<Map<String, Map<Integer, Map<String, Object>>>>
 {
+    /* (non-Javadoc)
+     * @see net.posick.media.metadata.exif.handlers.AbstractHandler
+     */
     public MetadataExtractorFileHandler(Context ctx)
     {
         super(ctx);
     }
     
     
+    /* (non-Javadoc)
+     * @see net.posick.media.metadata.exif.handlers.FileHandler#process(java.lang.String, java.io.InputStream)
+     */
     @Override
-    public void processFile(String key, InputStream in)
+    public void process(String key, InputStream in)
     throws IOException
     {
         String datastoreUri = ctx.get(Context.DATASTORE_URI);

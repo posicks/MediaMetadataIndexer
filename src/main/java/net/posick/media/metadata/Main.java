@@ -17,16 +17,16 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import net.posick.media.metadata.exif.Context;
-import net.posick.media.metadata.exif.Indexer;
+import net.posick.media.metadata.exif.MetadataExtractorFileHandler;
 import net.posick.media.metadata.exif.handlers.FileHandler;
 import net.posick.media.metadata.exif.handlers.InputHandler;
-import net.posick.media.metadata.exif.handlers.MetadataExtractorFileHandler;
 import net.posick.media.metadata.exif.handlers.OutputHandler;
-import net.posick.media.metadata.exif.input.S3DirectoryHandler;
+import net.posick.media.metadata.exif.input.S3BucketHandler;
 import net.posick.media.metadata.exif.output.CSQLOutputHandler;
 
 /**
+ * The Main Application class.  Starts the application and returns the resulting exit code.
+ * 
  * @author posicks
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -36,7 +36,7 @@ public class Main
     
     private static final Class<? extends FileHandler<?>> DEFAULT_FILE_HANDLER = MetadataExtractorFileHandler.class;
     
-    private static final Class<? extends InputHandler> DEFAULT_INPUT_HANDLER = S3DirectoryHandler.class;
+    private static final Class<? extends InputHandler> DEFAULT_INPUT_HANDLER = S3BucketHandler.class;
     
     private static final Class<? extends OutputHandler<?>> DEFAULT_OUTPUT_HANDLER = CSQLOutputHandler.class;
     
@@ -60,6 +60,19 @@ public class Main
     }
     
     
+    /**
+     * Instantiates the specified class file using the <init>(Context) constructor 
+     * 
+     * @param clazz The class to instantiate
+     * @param ctx The Context
+     * @return The object instance of the specified class
+     * 
+     * @throws SecurityException
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     * @throws IllegalArgumentException
+     * @throws InvocationTargetException
+     */
     private static <T extends Object> T newHandlerInstance(Class<T> clazz, Context ctx)
     throws SecurityException, InstantiationException, IllegalAccessException, 
            IllegalArgumentException, InvocationTargetException
@@ -82,7 +95,9 @@ public class Main
 
     
     /**
-     * @param args
+     * The applications main method.
+     * 
+     * @param args The command line arguments
      */
     public static void main(String[] args)
     {
@@ -103,6 +118,7 @@ public class Main
             Class<? extends OutputHandler<?>> outputHandlerClass = DEFAULT_OUTPUT_HANDLER;
             List<Pattern> filters = new ArrayList<>();
             
+            // Using the Apache Commons Command Line Interface API to parse command line  
             CommandLine cmdLine = cliParser.parse(cliOptions, args, true);
             Option[] cmdOptions = cmdLine.getOptions();
             String temp;
@@ -241,6 +257,8 @@ public class Main
                 }
             }
             
+            // Populate the application Context. The application Context is used to pass information through the
+            // application in a flexible way and acts as a session context during execution.
             ctx.put(Context.MAX_THREADS, threads);
             ctx.put(Context.INPUT_URI, inputUri);
             ctx.put(Context.DATASTORE_URI, outputUri);
@@ -302,6 +320,7 @@ public class Main
             System.exit(EXIT_CODES.INITIALIZATION_ERROR);
         }
         
+        // Initialize the metadata indexer
         Indexer indexer = new Indexer(ctx, inputHandler, fileHandler, outputHandler);
         exitCode = indexer.call();
         

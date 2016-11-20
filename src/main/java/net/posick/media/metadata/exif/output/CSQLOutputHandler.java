@@ -12,7 +12,7 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 
-import net.posick.media.metadata.exif.Context;
+import net.posick.media.metadata.Context;
 import net.posick.media.metadata.exif.handlers.OutputHandler;
 
 public class CSQLOutputHandler extends OutputHandler<Map<String, Map<Integer, Map<String, Object>>>>
@@ -53,10 +53,10 @@ public class CSQLOutputHandler extends OutputHandler<Map<String, Map<Integer, Ma
 
     
     @Override
-    public void output(String key, Map<String, Map<Integer, Map<String, Object>>> metadata)
+    public void output(String key, Map<String, Map<Integer, Map<String, Object>>> data)
     throws IOException
     {
-        Set<Map.Entry<String, Map<Integer, Map<String, Object>>>> directories = metadata.entrySet();
+        Set<Map.Entry<String, Map<Integer, Map<String, Object>>>> directories = data.entrySet();
         for (Map.Entry<String, Map<Integer, Map<String, Object>>> directoryEntry : directories)
         {
             String directoryName = directoryEntry.getKey();
