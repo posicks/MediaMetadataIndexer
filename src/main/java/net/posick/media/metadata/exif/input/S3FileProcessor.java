@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import net.posick.media.metadata.exif.Context;
 import net.posick.media.metadata.exif.handlers.FileHandler;
 
+@SuppressWarnings("rawtypes")
 public class S3FileProcessor implements FileProcessor
 {
     private static Logger logger = Logger.getLogger(S3FileProcessor.class.getName());

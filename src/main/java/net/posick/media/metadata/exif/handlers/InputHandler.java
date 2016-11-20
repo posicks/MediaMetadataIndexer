@@ -7,6 +7,7 @@ import net.posick.media.metadata.exif.Context;
 /**
  * @author posicks
  */
+@SuppressWarnings("rawtypes")
 public abstract class InputHandler extends AbstractHandler
 {
     protected FileHandler fileHandler;

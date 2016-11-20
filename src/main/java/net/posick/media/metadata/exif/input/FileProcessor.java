@@ -4,6 +4,7 @@ import java.io.InputStream;
 
 import net.posick.media.metadata.exif.handlers.FileHandler;
 
+@SuppressWarnings("rawtypes")
 public interface FileProcessor
 {
     public void setFileHandler(FileHandler fileHandler);
