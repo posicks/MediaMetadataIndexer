@@ -184,7 +184,7 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
         private FileProcessor fileProcessor;
 
         
-        public S3FileRunner( CloseableHttpClient httpClient, String uri, String key, FileProcessor fileProcessor)
+        public S3FileRunner(CloseableHttpClient httpClient, String uri, String key, FileProcessor fileProcessor)
         {
             this.httpClient = httpClient;
             this.uri = uri;
@@ -343,14 +343,14 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
     
 
     @Override
-    public void processFile(String s3Uri, String key, InputStream in)
+    public void processFile(String uri, String key, InputStream in)
     {
         try
         {
-            fileHandler.process(key, in);
+            fileHandler.process(uri, in);
         } catch (Exception e)
         {
-            logger.log(Level.WARNING, String.format("Error reading file \"%s\": %s - %s", s3Uri, e.getClass().getSimpleName(), e.getMessage()));
+            logger.log(Level.WARNING, String.format("Error reading file \"%s\": %s - %s", uri, e.getClass().getSimpleName(), e.getMessage()));
         }
     }
 

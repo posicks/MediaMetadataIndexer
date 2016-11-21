@@ -46,7 +46,6 @@ public class MetadataExtractorFileHandler extends FileHandler<Map<String, Map<In
             Map<String, Map<Integer, Map<String, Object>>> metadataMap = new LinkedHashMap<>();
             Metadata metadata = ImageMetadataReader.readMetadata(in);
     
-            System.out.println("File: " + ctx.get(Context.INPUT_URI) + "/" + key);
             for (Directory directory : metadata.getDirectories())
             {
                 Map<Integer, Map<String, Object>> directoryMap = new LinkedHashMap<>();

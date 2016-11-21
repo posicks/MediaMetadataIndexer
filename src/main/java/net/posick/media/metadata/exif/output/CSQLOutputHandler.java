@@ -118,13 +118,15 @@ public class CSQLOutputHandler extends OutputHandler<Map<String, Map<Integer, Ma
                                           .setString(3, (String) valuesMap.get("TagName"))
                                           .setString(4, value.toString())
                                           .setString(5, (String) valuesMap.get("Description")));
-                    //session.execute(String.format("INSERT INTO exif.metadata (key, directory, tag, tag_name, value, description) VALUES ('%s', '%s', %s, '%s', '%s', '%s')", key, directoryName, tag, valuesMap.get("TagName"), value, valuesMap.get("Description")));
                 } finally
                 {
                     session.close();
                 }
-
-                System.out.format("Directory [%s] - 0x%s (%s) = %s (%s)\n", directoryName, tag, valuesMap.get("TagName"), value, valuesMap.get("Description"));
+                
+                if (logger.isLoggable(Level.FINEST))
+                {
+                    logger.logp(Level.FINEST, LOG_CLASS_NAME, "output", String.format("Directory [%s] - %s (%s) = %s (%s)\n", directoryName, tag, valuesMap.get("TagName"), value, valuesMap.get("Description")));
+                }
             }
         }
     }
