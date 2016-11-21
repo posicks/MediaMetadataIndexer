@@ -83,4 +83,4 @@ select count(*) from metadata;
 select * from metadata limit 10;
 ```
 
-`truncate metadata` or `truncate metadata.exif` can be used to clear the datastore between executions. 
+`truncate metadata` or `truncate exif.metadata` can be used to clear the datastore between executions. 
