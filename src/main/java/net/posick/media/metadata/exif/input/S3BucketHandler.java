@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,34 +34,55 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
 import net.posick.media.metadata.Context;
+import net.posick.media.metadata.exif.handlers.FileHandler;
 import net.posick.media.metadata.exif.handlers.InputHandler;
 
 /**
+ * The S3BucketHandler is an InputHandler that retrieves the file listing and files from an S3 API data source
+ * 
  * @author posicks
  */
-public class S3BucketHandler extends InputHandler implements FileProcessor
+@SuppressWarnings("rawtypes")
+public class S3BucketHandler extends InputHandler
 {
+    /**
+     * SAX Parser interface.
+     * 
+     * SAX is used so that as the document is parsed FileHandlers can be executed concurrently with each other 
+     * and the parsing of the file listing.
+     * 
+     * @author posicks
+     */
     private static class S3Parser implements ContentHandler
     {
+        private static Logger logger = Logger.getLogger(S3Parser.class.getName());
+        
         private List<Pattern> filters;
         
         private boolean processingKey = false;
         
-        private List<S3FileRunner> fileRunners = new LinkedList<>();
+        private ExecutorService executor;
+        
+        private List<Future<Boolean>> futures = new LinkedList<>();
 
         private String uri;
 
         private CloseableHttpClient httpClient;
 
-        private FileProcessor fileProcessor;
+        private FileHandler fileHandler;
 
         
-        private S3Parser(CloseableHttpClient httpClient, String uri, List<Pattern> filters, FileProcessor fileProcessor)
+        private S3Parser(Context ctx, CloseableHttpClient httpClient, String uri, List<Pattern> filters, FileHandler fileHandler)
         {
             this.httpClient = httpClient;
+            executor = Executors.newWorkStealingPool(ctx.get(Context.MAX_THREADS));
+            this.executor = new ForkJoinPool(ctx.get(Context.MAX_THREADS), ForkJoinPool.defaultForkJoinWorkerThreadFactory, (Thread t, Throwable e) -> 
+            {
+                logger.log(Level.WARNING, String.format("Error occurred while processing S3 bucket: %s - %s", e.getClass().getSimpleName(), e.getMessage()));
+            }, true);
             this.uri = uri;
             this.filters = filters;
-            this.fileProcessor = fileProcessor;
+            this.fileHandler = fileHandler;
         }
         
         
@@ -128,22 +150,26 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
         public void characters(char[] ch, int start, int length)
         throws SAXException
         {
+            // Call the FileHandler for each file found in the file listings
             if (processingKey)
             {
                 String key = new String(ch, start, length).trim();
                 if (filters != null && filters.size() > 0)
                 {
+                    // If filers were provided, only process files that, match one of the specified filters 
                     for (Pattern p : filters)
                     {
                         Matcher m = p.matcher(key);
                         if (m.matches())
                         {
-                            fileRunners.add(new S3FileRunner(httpClient, uri, key, fileProcessor));
+                            // Schedule the execution of the FileHandler in another Thread
+                            futures.add(executor.submit(new S3FileRunner(httpClient, uri, key, fileHandler), true));
                         }
                     }
                 } else
                 {
-                    fileRunners.add(new S3FileRunner(httpClient, uri, key, fileProcessor));
+                    // Schedule the execution of the FileHandler in another Thread
+                    futures.add(executor.submit(new S3FileRunner(httpClient, uri, key, fileHandler), true));
                 }
             }
         }
@@ -171,6 +197,11 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
     }
     
     
+    /**
+     * The S3FileRunner is a Runnable to use to execute the file retrieval and parsing processes concurrently
+     * 
+     * @author posicks
+     */
     private static class S3FileRunner implements Runnable
     {
         private static Logger logger = Logger.getLogger(S3FileRunner.class.getName());
@@ -181,47 +212,53 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
         
         private String key;
         
-        private FileProcessor fileProcessor;
+        private FileHandler fileHandler;
 
         
-        public S3FileRunner(CloseableHttpClient httpClient, String uri, String key, FileProcessor fileProcessor)
+        public S3FileRunner(CloseableHttpClient httpClient, String uri, String key, FileHandler fileHandler)
         {
             this.httpClient = httpClient;
             this.uri = uri;
             this.key = key;
-            this.fileProcessor = fileProcessor;
+            this.fileHandler = fileHandler;
         }
         
         
         @Override
         public void run()
         {
-            CloseableHttpClient client = httpClient; // put httpClient into method stack, reducing ops needed to access
-            
             String s3Uri = this.uri;
             s3Uri += s3Uri.endsWith("/") ? key : "/" + key;
             HttpGet httpGet = new HttpGet(s3Uri);
             CloseableHttpResponse response = null;
             try
             {
-                response = client.execute(httpGet);
+                response = httpClient.execute(httpGet);
                 HttpEntity entity = response.getEntity();
                 
                 int respCode = response.getStatusLine().getStatusCode();
                 if (respCode == 200)
                 {
+                    // If the file was successfully retrieved get its InputStream and send it to the FileProcessor.
                     InputStream in = entity.getContent();
-                    fileProcessor.processFile(s3Uri, key, in);
+                    try
+                    {
+                        fileHandler.process(s3Uri, in);
+                    } catch (Exception e)
+                    {
+                        logger.log(Level.WARNING, String.format("Error reading file \"%s\": %s - %s", uri, e.getClass().getSimpleName(), e.getMessage()));
+                    }
                 } else
                 {
-                    fileProcessor.fileUnreadable(s3Uri, "HTTP Request was not successful. Responce Code was \"" + respCode + "\"");
+                    // If the file is unreadable send the error to the File processor
+                    logger.log(Level.WARNING, String.format("File unreadable %s: HTTP Request was not successful. Responce Code was %s", s3Uri, "" + respCode));
                 }
             } catch (ClientProtocolException e)
             {
-                fileProcessor.error(s3Uri, e);
+                logger.log(Level.WARNING, String.format("Error executing File handler %s: %s", e.getClass().getSimpleName(), e.getMessage()), e);
             } catch (IOException e)
             {
-                fileProcessor.error(s3Uri, e);
+                logger.log(Level.WARNING, String.format("Error executing File handler %s: %s", e.getClass().getSimpleName(), e.getMessage()), e);
             } finally
             {
                 if (response != null)
@@ -272,7 +309,9 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
     public void process(String inputUri)
     throws IOException
     {
-        xmlReader.setContentHandler(this.s3Parser = new S3Parser(httpClient, inputUri, ctx.get(Context.FILE_FILTERS), this));
+        // Retrieve the file listings and create a SAX Parser to parse the file keys out of the listings.
+        // The SAX ContentHandler will launch the file processing operations concurrently as files are found.
+        xmlReader.setContentHandler(this.s3Parser = new S3Parser(ctx, httpClient, inputUri, ctx.get(Context.FILE_FILTERS), fileHandler));
         
         HttpGet httpGet = new HttpGet(inputUri);
         httpGet.addHeader("Accept", "application/xml");
@@ -284,8 +323,10 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
             int respCode = response.getStatusLine().getStatusCode();
             if (respCode == 200)
             {
+                // File listings returned
                 InputStream in = entity.getContent();
                 Header contentEncoding = entity.getContentType();
+                // Verify the Content Type
                 switch (contentEncoding.getValue())
                 {
                     case "application/xml":
@@ -310,23 +351,19 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
             }
         }
         
-        List<S3FileRunner> fileRunners = s3Parser.fileRunners;
-        if (fileRunners != null && fileRunners.size() > 0)
+        // Wait for all file retrieval and parse tasks to complete.
+        List<Future<Boolean>> futures = s3Parser.futures;
+        if (futures != null && futures.size() > 0)
         {
-            // Launch file retrieval operations in parallel 
-            ExecutorService executor = Executors.newWorkStealingPool(maxThreads);
-            List<Future<Boolean>> futures = new LinkedList<>();
-            for (Runnable fileRunner : fileRunners)
-            {
-                futures.add(executor.submit(fileRunner, true));
-            }
-            
-            // Wait for tasks to complete.
             for (Future<Boolean> future : futures)
             {
                 try
                 {
-                    future.get();
+                    // Discard the results, the return value just allows us to wait for the Futures to complete executing.
+                    if (!future.isDone() && !future.isCancelled())
+                    {
+                        future.get();
+                    }
                 } catch (InterruptedException e)
                 {
                     logger.log(Level.FINE, "File processor interrupted");
@@ -339,33 +376,6 @@ public class S3BucketHandler extends InputHandler implements FileProcessor
         {
             logger.logp(Level.INFO, getClass().getName(), "process", String.format("No files found from \"%s\"", inputUri));
         }
-    }
-    
-
-    @Override
-    public void processFile(String uri, String key, InputStream in)
-    {
-        try
-        {
-            fileHandler.process(uri, in);
-        } catch (Exception e)
-        {
-            logger.log(Level.WARNING, String.format("Error reading file \"%s\": %s - %s", uri, e.getClass().getSimpleName(), e.getMessage()));
-        }
-    }
-
-
-    @Override
-    public void fileUnreadable(String s3Uri, String message)
-    {
-        logger.log(Level.WARNING, String.format("File unreadable %s: %s", s3Uri, message));
-    }
-    
-    
-    @Override
-    public void error(String uri, Throwable e)
-    {
-        logger.log(Level.WARNING, String.format("Error executing File processor %s: %s", e.getClass().getSimpleName(), e.getMessage()));
     }
     
     

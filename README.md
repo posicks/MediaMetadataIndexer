@@ -65,3 +65,22 @@ cd MediaMetadataIndexer
 mvn clean package assembly:single
 java -jar target/MediaMetadataIndexer-1.0.0-jar-with-dependencies.jar -i http://s3.amazonaws.com/waldo-recruiting -o localhost -t 100
 ```
+
+### Querying the Datastore
+ScyllaDB 1.4.1 and Cassandra 3.9 support different versions of CQL. To query the results within the datastore use the following commands:
+
+#### ScyllaDB 1.4.1
+`cqlsh --cqlversion=3.2.1 [host] [port]`
+
+#### Cassandra 3.9
+`cqlsh [host] [port]`
+
+#### Querying Data
+After cqlsh is successfully started the following commands may be used to query that date within the datastore:
+```
+use exif;
+select count(*) from metadata;
+select * from metadata limit 10;
+```
+
+`truncate metadata` or `truncate metadata.exif` can be used to clear the datastore between executions. 
